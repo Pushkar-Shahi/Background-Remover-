@@ -5,6 +5,7 @@ from fastapi.templating import Jinja2Templates
 
 from rembg import remove
 
+from typing import List
 import os
 import uuid
 import time
@@ -43,88 +44,113 @@ async def home(request: Request):
     )
 
 
-# Process image + addition
+# Process multiple images + addition
 @app.post("/process")
 async def process(
-    image: UploadFile = File(...),
+    images: List[UploadFile] = File(...),
     addition: str = Form(...)
 ):
 
-    # Read uploaded image
-    image_bytes = await image.read()
+    # -------------------------------
+    # Allow maximum 10 images
+    # -------------------------------
+
+    if len(images) > 10:
+
+        return JSONResponse(
+            {
+                "error": "Maximum 10 images are allowed."
+            },
+            status_code=400
+        )
 
 
     # -------------------------------
-    # Start measuring AI processing time
+    # Start timer
     # -------------------------------
 
     start_time = time.time()
 
 
-    # Remove background using rembg
-    output_image = remove(image_bytes)
+    processed_images = []
 
 
+    # -------------------------------
+    # Process every uploaded image
+    # -------------------------------
+
+    for image in images:
+
+        image_bytes = await image.read()
+
+
+        # Remove background
+        output_image = remove(image_bytes)
+
+
+        # Generate unique filename
+        filename = f"{uuid.uuid4()}.png"
+
+
+        output_path = os.path.join(
+            "outputs",
+            filename
+        )
+
+
+        # Save processed image
+        with open(output_path, "wb") as file:
+            file.write(output_image)
+
+
+        # Save image path for frontend
+        processed_images.append(
+            f"/outputs/{filename}"
+        )
+
+
+    # -------------------------------
     # Stop timer
+    # -------------------------------
+
     end_time = time.time()
 
-
-    # Calculate total processing time
     processing_time = end_time - start_time
 
 
     print(
-        f"Background removal took {processing_time:.2f} seconds"
+        f"Processed {len(images)} image(s) in "
+        f"{processing_time:.2f} seconds"
     )
 
 
     # -------------------------------
-    # Save processed image
-    # -------------------------------
-
-    filename = f"{uuid.uuid4()}.png"
-
-
-    output_path = os.path.join(
-        "outputs",
-        filename
-    )
-
-
-    with open(output_path, "wb") as file:
-        file.write(output_image)
-
-
-
-    # -------------------------------
-    # Solve addition problem
+    # Solve addition
     # -------------------------------
 
     try:
 
         numbers = addition.split("+")
 
-
         answer = sum(
             int(num.strip())
             for num in numbers
         )
-
 
     except:
 
         answer = "Invalid addition format"
 
 
-
     # -------------------------------
-    # Send response back to browser
+    # Send response
     # -------------------------------
 
     return JSONResponse(
         {
             "answer": answer,
-            "image": f"/outputs/{filename}",
-            "processing_time": f"{processing_time:.2f} seconds"
+            "images": processed_images,
+            "processing_time": f"{processing_time:.2f} seconds",
+            "total_images": len(images)
         }
     )

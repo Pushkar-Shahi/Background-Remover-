@@ -5,22 +5,20 @@
     <title>Background Remover</title>
 </head>
 
-
 <body>
 
 <h1>Background Remover + Addition Solver</h1>
-
 
 <form id="uploadForm">
 
     <input
         type="file"
-        id="image"
+        id="images"
         accept="image/*"
+        multiple
         required>
 
     <br><br>
-
 
     <input
         type="text"
@@ -30,21 +28,17 @@
 
     <br><br>
 
-
     <button type="submit">
         Submit
     </button>
 
 </form>
 
-
 <hr>
-
 
 <h2>Answer</h2>
 
 <p id="answer"></p>
-
 
 
 <h2>Processing Time</h2>
@@ -52,15 +46,12 @@
 <p id="time"></p>
 
 
+<h2>Processed Images</h2>
 
-<h2>Result Image</h2>
-
-<img id="result" width="300">
-
+<div id="results"></div>
 
 
 <script>
-
 
 document
 .getElementById("uploadForm")
@@ -68,69 +59,83 @@ document
 "submit",
 async function(e){
 
-
     e.preventDefault();
-
-
 
     const formData = new FormData();
 
+    // Get all selected images
+    const files = document
+        .getElementById("images")
+        .files;
 
+    // Send every image
+    for(let i = 0; i < files.length; i++){
 
-    formData.append(
-        "image",
-        document.getElementById("image").files[0]
-    );
+        formData.append(
+            "images",
+            files[i]
+        );
 
+    }
 
-
+    // Send addition question
     formData.append(
         "addition",
-        document.getElementById("addition").value
+        document
+        .getElementById("addition")
+        .value
     );
-
 
 
     const response = await fetch(
         "/process",
         {
-            method:"POST",
-            body:formData
+            method: "POST",
+            body: formData
         }
     );
-
 
 
     const data = await response.json();
 
 
-
-    // Display addition answer
+    // Show answer
     document
     .getElementById("answer")
     .innerText = data.answer;
 
 
-
-    // Display AI processing time
+    // Show processing time
     document
     .getElementById("time")
     .innerText = data.processing_time;
 
 
+    // Clear previous results
+    const container =
+        document.getElementById("results");
 
-    // Display processed image
-    document
-    .getElementById("result")
-    .src = data.image + "?" + Date.now();
+    container.innerHTML = "";
 
 
+    // Show every processed image
+    data.images.forEach(function(image){
+
+        const img = document.createElement("img");
+
+        img.src = image + "?" + Date.now();
+
+        img.width = 250;
+
+        img.style.margin = "10px";
+
+        container.appendChild(img);
+
+    });
 
 });
 
-
 </script>
-
 
 </body>
 
