@@ -1,11 +1,15 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Background Remover</title>
 </head>
+
+
 <body>
 
 <h1>Background Remover + Addition Solver</h1>
+
 
 <form id="uploadForm">
 
@@ -17,6 +21,7 @@
 
     <br><br>
 
+
     <input
         type="text"
         id="addition"
@@ -25,54 +30,108 @@
 
     <br><br>
 
+
     <button type="submit">
         Submit
     </button>
 
 </form>
 
+
 <hr>
+
 
 <h2>Answer</h2>
 
 <p id="answer"></p>
 
+
+
+<h2>Processing Time</h2>
+
+<p id="time"></p>
+
+
+
 <h2>Result Image</h2>
 
 <img id="result" width="300">
 
+
+
 <script>
 
-document.getElementById("uploadForm").addEventListener("submit", async function(e){
+
+document
+.getElementById("uploadForm")
+.addEventListener(
+"submit",
+async function(e){
+
 
     e.preventDefault();
 
+
+
     const formData = new FormData();
+
+
 
     formData.append(
         "image",
         document.getElementById("image").files[0]
     );
 
+
+
     formData.append(
         "addition",
         document.getElementById("addition").value
     );
 
-    const response = await fetch("/process",{
-        method:"POST",
-        body:formData
-    });
+
+
+    const response = await fetch(
+        "/process",
+        {
+            method:"POST",
+            body:formData
+        }
+    );
+
+
 
     const data = await response.json();
 
-    document.getElementById("answer").innerText = data.answer;
 
-    document.getElementById("result").src = data.image + "?" + Date.now();
+
+    // Display addition answer
+    document
+    .getElementById("answer")
+    .innerText = data.answer;
+
+
+
+    // Display AI processing time
+    document
+    .getElementById("time")
+    .innerText = data.processing_time;
+
+
+
+    // Display processed image
+    document
+    .getElementById("result")
+    .src = data.image + "?" + Date.now();
+
+
 
 });
 
+
 </script>
 
+
 </body>
+
 </html>

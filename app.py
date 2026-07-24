@@ -4,8 +4,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from rembg import remove
+
 import os
 import uuid
+import time
 
 
 app = FastAPI()
@@ -48,47 +50,81 @@ async def process(
     addition: str = Form(...)
 ):
 
-    # Read image bytes
+    # Read uploaded image
     image_bytes = await image.read()
+
+
+    # -------------------------------
+    # Start measuring AI processing time
+    # -------------------------------
+
+    start_time = time.time()
 
 
     # Remove background using rembg
     output_image = remove(image_bytes)
 
 
-    # Save output image
+    # Stop timer
+    end_time = time.time()
+
+
+    # Calculate total processing time
+    processing_time = end_time - start_time
+
+
+    print(
+        f"Background removal took {processing_time:.2f} seconds"
+    )
+
+
+    # -------------------------------
+    # Save processed image
+    # -------------------------------
+
     filename = f"{uuid.uuid4()}.png"
+
 
     output_path = os.path.join(
         "outputs",
         filename
     )
 
+
     with open(output_path, "wb") as file:
         file.write(output_image)
 
 
-    # Solve addition
+
+    # -------------------------------
+    # Solve addition problem
+    # -------------------------------
+
     try:
 
         numbers = addition.split("+")
+
 
         answer = sum(
             int(num.strip())
             for num in numbers
         )
 
+
     except:
 
         answer = "Invalid addition format"
 
 
+
+    # -------------------------------
+    # Send response back to browser
+    # -------------------------------
+
     return JSONResponse(
         {
             "answer": answer,
-            "image": f"/outputs/{filename}"
+            "image": f"/outputs/{filename}",
+            "processing_time": f"{processing_time:.2f} seconds"
         }
     )
-
-
-
