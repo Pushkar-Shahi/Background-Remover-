@@ -1,142 +1,428 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
     <title>Background Remover</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        h2 {
+            margin-bottom: 25px;
+        }
+
+        .upload-box {
+            border: 2px dashed #aaa;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        input[type="file"] {
+            margin: 15px 0;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #status {
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        .results {
+            display: grid;
+            grid-template-columns: repeat(
+                auto-fit,
+                minmax(280px, 1fr)
+            );
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .result {
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            padding: 15px;
+        }
+
+        .result img,
+        .result video {
+            width: 100%;
+            max-height: 500px;
+            object-fit: contain;
+            border-radius: 8px;
+
+            /*
+             * Checkerboard background makes
+             * transparent areas visible.
+             */
+            background-image:
+                linear-gradient(45deg, #ddd 25%, transparent 25%),
+                linear-gradient(-45deg, #ddd 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #ddd 75%),
+                linear-gradient(-45deg, transparent 75%, #ddd 75%);
+
+            background-size: 20px 20px;
+
+            background-position:
+                0 0,
+                0 10px,
+                10px -10px,
+                -10px 0px;
+        }
+
+        .download {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 9px 15px;
+            border-radius: 7px;
+            text-decoration: none;
+            background: #222;
+            color: white;
+        }
+
+        .error {
+            color: red;
+        }
+
+    </style>
+
 </head>
+
 
 <body>
 
-<h1>Background Remover + Addition Solver</h1>
 
-<form id="uploadForm">
-
-    <input
-        type="file"
-        id="images"
-        accept="image/*"
-        multiple
-        required>
-
-    <br><br>
-
-    <input
-        type="text"
-        id="addition"
-        placeholder="Example: 15+28"
-        required>
-
-    <br><br>
-
-    <button type="submit">
-        Submit
-    </button>
-
-</form>
-
-<hr>
-
-<h2>Answer</h2>
-
-<p id="answer"></p>
+    <h2>
+        Background Remover
+    </h2>
 
 
-<h2>Processing Time</h2>
+    <div class="upload-box">
 
-<p id="time"></p>
+        <form
+            id="uploadForm"
+            enctype="multipart/form-data">
+
+            <input
+                type="file"
+                name="media"
+                id="media"
+                accept="image/*,video/mp4"
+                multiple
+                required>
+
+            <br>
+
+            <button
+                type="submit"
+                id="submitButton">
+
+                Remove Background
+
+            </button>
+
+        </form>
+
+    </div>
 
 
-<h2>Processed Images</h2>
-
-<div id="results"></div>
+    <div id="status"></div>
 
 
-<script>
+    <div
+        id="results"
+        class="results">
+    </div>
 
-document
-.getElementById("uploadForm")
-.addEventListener(
-"submit",
-async function(e){
 
-    e.preventDefault();
+    <script>
 
-    const formData = new FormData();
+        const form =
+            document.getElementById("uploadForm");
 
-    // Get all selected images
-    const files = document
-        .getElementById("images")
-        .files;
+        const status =
+            document.getElementById("status");
 
-    // Send every image
-    for(let i = 0; i < files.length; i++){
+        const results =
+            document.getElementById("results");
 
-        formData.append(
-            "images",
-            files[i]
+        const submitButton =
+            document.getElementById("submitButton");
+
+
+        form.addEventListener(
+            "submit",
+            async function(event) {
+
+                event.preventDefault();
+
+
+                const files =
+                    document.getElementById("media").files;
+
+
+                if (!files.length) {
+
+                    status.textContent =
+                        "Please select a file.";
+
+                    return;
+                }
+
+
+                const formData =
+                    new FormData();
+
+
+                for (const file of files) {
+
+                    formData.append(
+                        "media",
+                        file
+                    );
+
+                }
+
+
+                submitButton.disabled = true;
+
+                status.textContent =
+                    "Removing background...";
+
+                results.innerHTML = "";
+
+
+                try {
+
+                    const response =
+                        await fetch(
+                            "/process",
+                            {
+                                method: "POST",
+                                body: formData
+                            }
+                        );
+
+
+                    const data =
+                        await response.json();
+
+
+                    if (!response.ok) {
+
+                        throw new Error(
+                            data.error ||
+                            "Processing failed."
+                        );
+
+                    }
+
+
+                    status.textContent =
+                        `Finished in ${data.time}`;
+
+
+                    for (const file of data.files) {
+
+                        if (file.error) {
+
+                            const error =
+                                document.createElement("div");
+
+                            error.className =
+                                "result error";
+
+                            error.textContent =
+                                file.error;
+
+                            results.appendChild(
+                                error
+                            );
+
+                            continue;
+                        }
+
+
+                        const container =
+                            document.createElement("div");
+
+                        container.className =
+                            "result";
+
+
+                        // ==================================
+                        // IMAGE
+                        // ==================================
+
+                        if (file.type === "image") {
+
+                            const image =
+                                document.createElement("img");
+
+
+                            image.src =
+                                file.url;
+
+
+                            image.alt =
+                                "Background removed";
+
+
+                            image.onload =
+                                function() {
+
+                                    console.log(
+                                        "Transparent image loaded"
+                                    );
+
+                                };
+
+
+                            container.appendChild(
+                                image
+                            );
+
+                        }
+
+
+                        // ==================================
+                        // VIDEO
+                        // ==================================
+
+                        else if (
+                            file.type === "video"
+                        ) {
+
+                            const video =
+                                document.createElement("video");
+
+
+                            video.controls =
+                                true;
+
+
+                            video.autoplay =
+                                false;
+
+
+                            video.loop =
+                                true;
+
+
+                            video.playsInline =
+                                true;
+
+
+                            const source =
+                                document.createElement("source");
+
+
+                            source.src =
+                                file.url;
+
+
+                            source.type =
+                                "video/webm";
+
+
+                            video.appendChild(
+                                source
+                            );
+
+
+                            container.appendChild(
+                                video
+                            );
+
+                        }
+
+
+                        // ==================================
+                        // DOWNLOAD
+                        // ==================================
+
+                        const download =
+                            document.createElement("a");
+
+
+                        download.href =
+                            file.url;
+
+
+                        download.download =
+                            "";
+
+
+                        download.className =
+                            "download";
+
+
+                        download.textContent =
+                            "Download";
+
+
+                        container.appendChild(
+                            download
+                        );
+
+
+                        results.appendChild(
+                            container
+                        );
+
+                    }
+
+
+                } catch (error) {
+
+                    console.error(error);
+
+
+                    status.textContent =
+                        "Error: " +
+                        error.message;
+
+
+                } finally {
+
+                    submitButton.disabled =
+                        false;
+
+                }
+
+            }
         );
 
-    }
+    </script>
 
-    // Send addition question
-    formData.append(
-        "addition",
-        document
-        .getElementById("addition")
-        .value
-    );
-
-
-    const response = await fetch(
-        "/process",
-        {
-            method: "POST",
-            body: formData
-        }
-    );
-
-
-    const data = await response.json();
-
-
-    // Show answer
-    document
-    .getElementById("answer")
-    .innerText = data.answer;
-
-
-    // Show processing time
-    document
-    .getElementById("time")
-    .innerText = data.processing_time;
-
-
-    // Clear previous results
-    const container =
-        document.getElementById("results");
-
-    container.innerHTML = "";
-
-
-    // Show every processed image
-    data.images.forEach(function(image){
-
-        const img = document.createElement("img");
-
-        img.src = image + "?" + Date.now();
-
-        img.width = 250;
-
-        img.style.margin = "10px";
-
-        container.appendChild(img);
-
-    });
-
-});
-
-</script>
 
 </body>
 
 </html>
+
